@@ -12,6 +12,7 @@ use App\Http\Controllers\GuardDashboardController;
 use App\Http\Controllers\GuardStudentTrackingController;
 use App\Http\Controllers\InstructorClassRegistrationController;
 use App\Http\Controllers\InstructorDashboardController;
+use App\Http\Controllers\InstructorQrAttendanceController;
 use App\Http\Controllers\InstructorStudentRegistrationController;
 use App\Http\Controllers\PortalProfileController;
 use App\Http\Controllers\ScheduleController;
@@ -53,7 +54,6 @@ Route::middleware([
     'auth',
     'student',
 ])->group(function () {
-
     Route::get(
         '/student-registration/{token}',
         [
@@ -123,6 +123,10 @@ Route::middleware([
     'auth',
     'instructor',
 ])->group(function () {
+    Route::post('/instructor/classes/{schedule}/attendance/qr/lookup', [InstructorQrAttendanceController::class, 'lookup'])->name('instructor.attendance.qr.lookup');
+    Route::post('/instructor/classes/{schedule}/attendance/qr/record', [InstructorQrAttendanceController::class, 'record'])->name('instructor.attendance.qr.record');
+    Route::post('/instructor/classes/{schedule}/students/{student}/qr/regenerate', [InstructorQrAttendanceController::class, 'regenerate'])->name('instructor.students.qr.regenerate');
+    Route::delete('/instructor/classes/{schedule}/students/{student}/qr', [InstructorQrAttendanceController::class, 'revoke'])->name('instructor.students.qr.revoke');
     Route::get('/instructor/advisory-students', [AdvisoryStudentsController::class, 'index'])->name('instructor.advisory-students');
 
     /*

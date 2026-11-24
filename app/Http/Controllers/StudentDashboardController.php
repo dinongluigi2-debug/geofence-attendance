@@ -6,7 +6,9 @@ use App\Models\Attendance;
 use App\Models\Schedule;
 use App\Services\AttendanceAutoService;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -16,6 +18,27 @@ class StudentDashboardController extends Controller
         Request $request
     ): Response {
         $user = $request->user();
+
+        $token = DB::transaction(function () use ($user): ?string {
+            $lockedUser = $user->newQuery()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+
+            if (! $lockedUser->student_qr_token_hash && ! $lockedUser->student_qr_revoked_at) {
+                do {
+                    $token = bin2hex(random_bytes(32));
+                } while ($lockedUser->newQuery()->where('student_qr_token_hash', hash('sha256', $token))->exists());
+
+                $lockedUser->forceFill([
+                    'student_qr_token_hash' => hash('sha256', $token),
+                    'student_qr_token_encrypted' => Crypt::encryptString($token),
+                ])->save();
+
+                return $token;
+            }
+
+            return $lockedUser->student_qr_token_encrypted
+                ? Crypt::decryptString($lockedUser->student_qr_token_encrypted)
+                : null;
+        });
 
         /*
         |--------------------------------------------------------------------------
@@ -493,6 +516,7 @@ class StudentDashboardController extends Controller
             'student/Dashboard',
             [
                 'student' => [
+                    'qr_token' => $token,
                     'profile_picture_url' => $user->profile_picture_url,
                     'name' => $user->name,
 

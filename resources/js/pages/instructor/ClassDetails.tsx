@@ -16,6 +16,7 @@ import {
     XCircle,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import QrAttendance from '@/components/instructor/qr-attendance';
 
 type ClassDetails = {
     id: number;
@@ -775,6 +776,8 @@ export default function ClassDetailsPage() {
                         EXISTING ATTENDANCE STUDENT ROSTER
                     ===================================================== */}
 
+                    <QrAttendance scheduleId={classDetails.id} />
+
                     <section className="mt-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                         <header className="flex flex-col gap-4 border-b border-slate-200 px-6 py-6 sm:flex-row sm:items-center sm:justify-between">
                             <div>
@@ -808,6 +811,7 @@ export default function ClassDetailsPage() {
                                     key={student.id}
                                     student={student}
                                     number={index + 1}
+                                    scheduleId={classDetails.id}
                                 />
                             ))
                         ) : (
@@ -842,8 +846,49 @@ function StatisticCard({
     );
 }
 
-function StudentRow({ student, number }: { student: Student; number: number }) {
+function StudentRow({
+    student,
+    number,
+    scheduleId,
+}: {
+    student: Student;
+    number: number;
+    scheduleId: number;
+}) {
     const initial = student.name.trim().charAt(0).toUpperCase();
+    const manageQr = async (action: 'regenerate' | 'revoke') => {
+        if (
+            !window.confirm(
+                action === 'revoke'
+                    ? `Revoke the QR code for ${student.name}?`
+                    : `Generate a new QR code for ${student.name}? The current code will stop working.`,
+            )
+        ) {
+            return;
+        }
+
+        const response = await fetch(
+            `/instructor/classes/${scheduleId}/students/${student.id}/qr${action === 'revoke' ? '' : '/regenerate'}`,
+            {
+                method: action === 'revoke' ? 'DELETE' : 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    Accept: 'application/json',
+                    'X-CSRF-TOKEN':
+                        document.querySelector<HTMLMetaElement>(
+                            'meta[name="csrf-token"]',
+                        )?.content ?? '',
+                },
+            },
+        );
+        const result = await response.json();
+        window.alert(
+            result.message ??
+                (response.ok
+                    ? 'QR code updated.'
+                    : 'Unable to update QR code.'),
+        );
+    };
 
     return (
         <article className="grid gap-4 border-b border-slate-200 px-6 py-5 last:border-b-0 sm:grid-cols-[30px_48px_1fr_auto_auto] sm:items-center">
@@ -866,6 +911,22 @@ function StudentRow({ student, number }: { student: Student; number: number }) {
             </span>
 
             <StudentStatus status={student.status} />
+            <div className="flex gap-2 sm:col-span-5 sm:justify-end">
+                <button
+                    type="button"
+                    onClick={() => void manageQr('regenerate')}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold"
+                >
+                    Regenerate QR
+                </button>
+                <button
+                    type="button"
+                    onClick={() => void manageQr('revoke')}
+                    className="rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-700"
+                >
+                    Revoke QR
+                </button>
+            </div>
         </article>
     );
 }

@@ -16,6 +16,9 @@ class Attendance extends Model
         'time_out',
         'latitude',
         'longitude',
+        'attendance_method',
+        'recorded_by',
+        'manual_reason',
     ];
 
     public function setStatusAttribute(string $value): void
@@ -57,5 +60,10 @@ class Attendance extends Model
             User::class,
             'student_id'
         );
+    }
+
+    public function recorder(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
     }
 }

@@ -32,6 +32,7 @@ type Student = {
     course?: string | null;
     section?: string | null;
     student_id?: string | null;
+    qr_token?: string | null;
 };
 
 type AttendanceStats = {
@@ -555,9 +556,7 @@ function StudentDashboardContent({
     |--------------------------------------------------------------------------
     */
 
-    const qrValue = student?.student_id
-        ? `PSU-STUDENT:${student.student_id}`
-        : 'PSU-STUDENT:UNAVAILABLE';
+    const qrValue = student?.qr_token ?? '';
 
     /*
     |--------------------------------------------------------------------------
@@ -1013,11 +1012,12 @@ function StudentDashboardContent({
 
                                     <div className="min-w-0">
                                         <h3 className="font-bold break-words text-gray-950 sm:text-lg">
-                                            Student ID QR Code
+                                            Attendance QR Code
                                         </h3>
 
                                         <p className="text-sm break-words text-gray-700">
-                                            For manual guard verification
+                                            Present this code to your instructor
+                                            for attendance verification.
                                         </p>
                                     </div>
                                 </div>
@@ -1035,25 +1035,39 @@ function StudentDashboardContent({
                             {qrOpen && (
                                 <div className="border-t border-gray-100 px-3 pt-5 pb-6 text-center sm:px-5 sm:pb-7">
                                     <div className="mx-auto inline-flex max-w-full items-center justify-center overflow-hidden rounded-[18px] border-2 border-[#ead0d7] bg-white p-3 sm:p-4">
-                                        <QRCodeSVG
-                                            value={qrValue}
-                                            size={180}
-                                            fgColor="#9b002d"
-                                            bgColor="#ffffff"
-                                            level="M"
-                                        />
+                                        {qrValue ? (
+                                            <QRCodeSVG
+                                                value={qrValue}
+                                                size={180}
+                                                fgColor="#9b002d"
+                                                bgColor="#ffffff"
+                                                level="M"
+                                            />
+                                        ) : (
+                                            <p className="p-8 text-sm text-gray-600">
+                                                Your attendance code is
+                                                unavailable. Contact your
+                                                instructor to have it
+                                                regenerated.
+                                            </p>
+                                        )}
                                     </div>
 
-                                    <p className="mt-4 font-mono text-sm font-bold break-words text-gray-950">
-                                        {student?.student_id ||
-                                            'Student ID unavailable'}
+                                    <p className="mt-4 text-sm break-words text-gray-700">
+                                        This code contains a private random
+                                        identifier. Only an authorized
+                                        instructor can use it to verify your
+                                        enrollment and attendance.
                                     </p>
-
-                                    <p className="mt-1 text-sm break-words text-gray-700">
-                                        {[studentName, courseSection]
-                                            .filter(Boolean)
-                                            .join(' · ')}
-                                    </p>
+                                    {qrValue && (
+                                        <p className="mx-auto mt-3 max-w-xl rounded-lg bg-gray-50 p-3 text-left text-xs break-all text-gray-600">
+                                            Manual fallback code for your
+                                            instructor:{' '}
+                                            <code className="font-mono font-semibold text-gray-800">
+                                                {qrValue}
+                                            </code>
+                                        </p>
+                                    )}
                                 </div>
                             )}
                         </div>

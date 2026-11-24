@@ -45,7 +45,7 @@ class User extends Authenticatable
     }
 
     protected $hidden = [
-        'password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token',
+        'password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token', 'student_qr_token_hash', 'student_qr_token_encrypted', 'student_qr_revoked_at',
     ];
 
     protected function casts(): array

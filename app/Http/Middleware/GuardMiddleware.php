@@ -16,7 +16,7 @@ class GuardMiddleware
             return redirect()->route('login');
         }
 
-        abort_if($user->status === 'Inactive', 403, 'This account is inactive.');
+        abort_if(strtolower((string) $user->status) === 'inactive', 403, 'This account is inactive.');
         if ($request->expectsJson()) {
             abort_unless($user->role === 'guard', 403);
         }

@@ -25,8 +25,8 @@ class StudentAttendanceCheckInController extends Controller
                 'between:-90,90',
             ],
 
-            // Optional for existing API clients; browser check-ins always send it.
-            'accuracy' => ['sometimes', 'required', 'numeric', 'min:0', 'max:50'],
+            // Reject a coordinate that the device itself reports as too imprecise.
+            'accuracy' => ['required', 'numeric', 'min:0', 'max:50'],
 
             'longitude' => [
                 'required',
@@ -36,7 +36,7 @@ class StudentAttendanceCheckInController extends Controller
         ]);
 
         $student = $request->user();
-        abort_unless($student->role === 'student' && $student->status !== 'Inactive', 403);
+        abort_unless($student->role === 'student' && strtolower((string) $student->status) !== 'inactive', 403);
 
         $schedule = Schedule::query()
             ->findOrFail(
@@ -56,6 +56,10 @@ class StudentAttendanceCheckInController extends Controller
                     'users.id',
                     $student->id
                 )
+                ->where(function ($query): void {
+                    $query->whereNull('schedule_student.status')
+                        ->orWhereRaw('LOWER(schedule_student.status) = ?', ['active']);
+                })
                 ->exists();
 
         if (! $registered) {
@@ -218,13 +222,29 @@ class StudentAttendanceCheckInController extends Controller
 
         $attendance = $schedule->getConnection()->transaction(function () use ($schedule, $student, $now, $attendanceDate, $status, $studentLatitude, $studentLongitude) {
             $lockedSchedule = Schedule::whereKey($schedule->id)->lockForUpdate()->firstOrFail();
-            abort_unless($lockedSchedule->recording, 422, 'Attendance recording is not active for this class.');
+            abort_unless($lockedSchedule->recording && in_array($lockedSchedule->status, ['Scheduled', 'Ongoing'], true), 422, 'Attendance recording is not active for this class.');
+            $stillRegistered = $lockedSchedule->registeredStudents()
+                ->where('users.id', $student->id)
+                ->where(function ($query): void {
+                    $query->whereNull('schedule_student.status')
+                        ->orWhereRaw('LOWER(schedule_student.status) = ?', ['active']);
+                })
+                ->exists();
+            abort_unless($stillRegistered, 403, 'You are not actively registered for this class.');
             $key = [
                 'student_id' => $student->id,
                 'schedule_id' => $schedule->id,
                 'attendance_date' => $attendanceDate,
             ];
-            $existing = Attendance::where('student_id', $student->id)->where('schedule_id', $schedule->id)->whereDate('attendance_date', $attendanceDate)->first();
+            $existing = Attendance::where('student_id', $student->id)
+                ->where('schedule_id', $schedule->id)
+                ->where(function ($query) use ($attendanceDate): void {
+                    $query->whereDate('attendance_date', $attendanceDate)
+                        ->orWhere(function ($legacy) use ($attendanceDate): void {
+                            $legacy->whereNull('attendance_date')->whereDate('created_at', $attendanceDate);
+                        });
+                })
+                ->first();
             if ($existing && in_array(strtolower($existing->status), ['present', 'late'], true)) {
                 return $existing;
             }
@@ -235,6 +255,9 @@ class StudentAttendanceCheckInController extends Controller
                 'time_in' => $now,
                 'latitude' => $studentLatitude,
                 'longitude' => $studentLongitude,
+                'attendance_method' => 'gps',
+                'recorded_by' => null,
+                'manual_reason' => null,
             ])->save();
 
             return $record;
