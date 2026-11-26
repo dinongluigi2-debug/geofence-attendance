@@ -210,7 +210,7 @@ export default function StudentRegistration({
         <>
             <Head title="Student Registration" />
 
-            <main className="min-h-full bg-[#f7f8fa] px-4 py-6 sm:px-6 lg:px-8">
+            <main className="min-h-full bg-[#f7f8fa] px-4 py-6 text-slate-950 sm:px-6 lg:px-8">
                 <div className="w-full min-w-0">
                     <header>
                         <h1 className="text-3xl font-bold text-[#970027]">
@@ -318,7 +318,7 @@ export default function StudentRegistration({
                                         type="button"
                                         onClick={() => void copyLink()}
                                         disabled={!registrationLink.isActive}
-                                        className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-gray-300 px-5 text-sm font-bold transition hover:bg-gray-50 disabled:opacity-50"
+                                        className="inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-5 text-sm font-bold text-slate-800 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-100 disabled:text-slate-500 disabled:opacity-100"
                                     >
                                         {copied ? (
                                             <Check size={17} />
@@ -335,7 +335,7 @@ export default function StudentRegistration({
                                         type="button"
                                         onClick={regenerate}
                                         disabled={processing}
-                                        className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold"
+                                        className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 disabled:opacity-100"
                                     >
                                         <RefreshCw size={16} />
                                         Regenerate Link
