@@ -25,6 +25,7 @@ class GuardStudentStatusService
                 'attendances' => fn ($query) => $query->whereDate('attendance_date', $now->toDateString()),
                 'registeredStudents' => function ($query) {
                     $query->where('users.role', 'student');
+                    $query->where('users.status', 'Active');
                 },
             ])
             ->get()
@@ -34,6 +35,18 @@ class GuardStudentStatusService
                     $this->normalizeDays($schedule->days),
                     true
                 );
+            })
+            ->each(function (Schedule $schedule): void {
+                $section = strtolower(trim((string) $schedule->section));
+
+                if ($section !== '') {
+                    $schedule->setRelation(
+                        'registeredStudents',
+                        $schedule->registeredStudents
+                            ->filter(fn (User $student): bool => strtolower(trim((string) $student->section)) === $section)
+                            ->values()
+                    );
+                }
             })
             ->values();
     }
@@ -48,24 +61,9 @@ class GuardStudentStatusService
 
         $schedules = $this->todaySchedules($now);
 
-        $studentIds = $schedules
-            ->flatMap(function (Schedule $schedule): array {
-                return $schedule
-                    ->registeredStudents
-                    ->pluck('id')
-                    ->all();
-            })
-            ->unique()
-            ->values()
-            ->all();
-
-        if (empty($studentIds)) {
-            return collect();
-        }
-
         return User::query()
             ->where('role', 'student')
-            ->whereIn('id', $studentIds)
+            ->where('status', 'Active')
             ->orderBy('name')
             ->get()
             ->map(function (User $student) use ($schedules, $now): array {

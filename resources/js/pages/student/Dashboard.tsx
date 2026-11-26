@@ -941,6 +941,13 @@ function StudentDashboardContent({
                                                 {gpsError}
                                             </p>
                                         )}
+                                        <p className="mt-2 text-xs leading-5 text-[#7d0b1c]">
+                                            If GPS is denied, unavailable,
+                                            inaccurate, or outside the class
+                                            area, present your Attendance QR
+                                            Code below to your instructor for
+                                            in-person verification.
+                                        </p>
                                     </div>
                                 </div>
 

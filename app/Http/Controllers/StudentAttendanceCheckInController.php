@@ -36,7 +36,7 @@ class StudentAttendanceCheckInController extends Controller
         ]);
 
         $student = $request->user();
-        abort_unless($student->role === 'student' && strtolower((string) $student->status) !== 'inactive', 403);
+        abort_unless($student->role === 'student' && strtolower((string) $student->status) === 'active', 403);
 
         $schedule = Schedule::query()
             ->findOrFail(

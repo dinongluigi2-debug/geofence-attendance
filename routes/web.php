@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\PortalMonitoringController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AdvisoryStudentsController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\ClassRegistrationController;
 use App\Http\Controllers\GuardDashboardController;
 use App\Http\Controllers\GuardStudentTrackingController;
@@ -694,6 +695,11 @@ Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(fun
 });
 Route::get('/admin/registrations', [PortalMonitoringController::class, 'registrations'])
     ->middleware(['auth', 'admin'])->name('admin.registrations');
+
+// Keep Fortify's reset flow while converting mail or broker failures into a safe form error.
+Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
+    ->middleware('guest')
+    ->name('password.email');
 
 Route::middleware(['auth', 'student'])->prefix('student/notifications')->name('student.notifications.')->group(function () {
     Route::get('/', [StudentNotificationController::class, 'index'])->name('index');

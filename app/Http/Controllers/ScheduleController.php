@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Schedule;
+use App\Models\User;
 use App\Rules\ClassroomCoordinates;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ class ScheduleController extends Controller
 
         return Inertia::render('instructor/Schedules', [
             'instructorSchedules' => $schedules,
+            'sections' => $this->availableSections(),
         ]);
     }
 
@@ -167,13 +169,8 @@ class ScheduleController extends Controller
                 'max:255',
             ],
 
-            /*
-            | Section is nullable temporarily so your current Schedule.tsx
-            | continues working. Once the section input is added, change
-            | nullable to required.
-            */
             'section' => [
-                'nullable',
+                'required',
                 'string',
                 'max:100',
             ],
@@ -245,6 +242,20 @@ class ScheduleController extends Controller
                 ]),
             ],
         ]);
+    }
+
+    /** Return section values already recorded on student profiles. */
+    private function availableSections(): array
+    {
+        return User::query()
+            ->where('role', 'student')
+            ->where('status', 'Active')
+            ->whereNotNull('section')
+            ->whereRaw("TRIM(section) <> ''")
+            ->distinct()
+            ->orderBy('section')
+            ->pluck('section')
+            ->all();
     }
 
     /**

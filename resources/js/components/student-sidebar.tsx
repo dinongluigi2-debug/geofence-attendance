@@ -58,7 +58,7 @@ export default function StudentSidebar() {
                         />
                         <span className="group-data-[collapsible=icon]:hidden">
                             <span className="block font-bold">
-                                PSU Attendance
+                                CampusTrack
                             </span>
                             <span className="mt-1 block text-xs font-semibold tracking-wider text-pink-200 uppercase">
                                 Student Portal

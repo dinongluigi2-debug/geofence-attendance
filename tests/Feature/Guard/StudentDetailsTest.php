@@ -23,7 +23,7 @@ class StudentDetailsTest extends TestCase
         ], $overrides));
     }
 
-    public function test_guard_sees_all_registered_classes_and_only_selected_student_history(): void
+    public function test_guard_detail_discloses_only_relevant_schedule_status_and_logs_access(): void
     {
         $this->travelTo(now()->setDate(2026, 10, 7)->setTime(9, 30));
         $guard = User::factory()->create(['role' => 'guard']);
@@ -43,14 +43,18 @@ class StudentDetailsTest extends TestCase
         $this->actingAs($guard)->get('/guard/student-tracking/'.$student->id)
             ->assertOk()->assertInertia(fn (Assert $page) => $page
             ->component('guard/StudentDetails')->where('student.id', $student->id)
-            ->missing('student.password')->missing('student.email')
+            ->missing('student.password')->missing('student.email')->missing('student.profile_picture_url')
             ->has('schedules', 3)->where('schedules.0.state', 'Ongoing')
             ->where('schedules.1.state', 'Pending')->where('schedules.1.next_session.start', '2026-10-07T11:00:00+08:00')
             ->where('schedules.2.state', 'Completed')->where('schedules.2.next_session', null)
-            ->where('records.total', 25)->has('records.data', 20)
-            ->where('records.data.0.subject', 'Mathematics'));
-        $this->get('/guard/student-tracking/'.$student->id.'?page=2')
-            ->assertInertia(fn (Assert $page) => $page->where('records.current_page', 2)->has('records.data', 5));
+            ->where('schedules.0.attendance_status', 'Not recorded')
+            ->missing('records'));
+        $this->assertDatabaseHas('activity_logs', [
+            'actor_id' => $guard->id,
+            'action' => 'Guard student schedule and attendance status disclosed',
+            'subject_type' => 'User',
+            'subject_id' => $student->id,
+        ]);
     }
 
     public function test_overnight_class_is_ongoing_after_midnight_and_inactive_enrollment_is_not_pending(): void
@@ -65,8 +69,8 @@ class StudentDetailsTest extends TestCase
         $student->registeredSchedules()->attach($inactive->id, ['status' => 'inactive']);
         $this->actingAs($guard)->get('/guard/student-tracking/'.$student->id)
             ->assertInertia(fn (Assert $page) => $page
-                ->where('schedules.0.state', 'Inactive enrollment')->where('schedules.0.next_session', null)
-                ->where('schedules.1.state', 'Ongoing')->where('schedules.1.next_session.start', '2026-10-06T23:00:00+08:00'));
+                ->has('schedules', 1)
+                ->where('schedules.0.state', 'Ongoing')->where('schedules.0.next_session.start', '2026-10-06T23:00:00+08:00'));
     }
 
     public function test_detail_access_requires_guard_and_a_student_target(): void
@@ -74,11 +78,73 @@ class StudentDetailsTest extends TestCase
         $student = User::factory()->create(['role' => 'student']);
         $guard = User::factory()->create(['role' => 'guard']);
         $this->get('/guard/student-tracking/'.$student->id)->assertRedirect('/login');
+        $this->get('/guard/student-tracking')->assertRedirect('/login');
         foreach (['student', 'instructor', 'admin'] as $role) {
             $user = User::factory()->create(['role' => $role]);
             $this->actingAs($user)->getJson('/guard/student-tracking/'.$student->id)->assertForbidden();
+            $this->actingAs($user)->getJson('/guard/student-tracking')->assertForbidden();
         }
         $this->actingAs($guard)->get('/guard/student-tracking/'.$guard->id)->assertNotFound();
-        $this->get('/guard/student-tracking/'.$student->id)->assertInertia(fn (Assert $page) => $page->has('schedules', 0)->where('records.total', 0));
+        $this->actingAs($guard)->get('/guard/student-tracking/'.$student->id)->assertInertia(fn (Assert $page) => $page->has('schedules', 0)->missing('records'));
+    }
+
+    public function test_tracking_lists_active_students_even_without_a_class_today(): void
+    {
+        $guard = User::factory()->create(['role' => 'guard', 'status' => 'Active']);
+        $student = User::factory()->create([
+            'role' => 'student', 'status' => 'Active', 'name' => 'Trackable Student',
+            'student_id' => '2026-0042', 'year' => '4th Year', 'section' => '4C',
+        ]);
+        $inactive = User::factory()->create([
+            'role' => 'student', 'status' => 'Inactive', 'name' => 'Inactive Student',
+        ]);
+
+        $this->actingAs($guard)->get('/guard/student-tracking')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('guard/StudentTracking')
+                ->has('students', 0));
+        $this->actingAs($guard)->get('/guard/student-tracking?search=2026-0042')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('students', 1)
+                ->where('students.0.id', $student->id)
+                ->where('students.0.name', 'Trackable Student')
+                ->where('students.0.studentNumber', '2026-0042')
+                ->where('students.0.year', '4th Year')
+                ->where('students.0.section', '4C'));
+
+        $this->assertDatabaseHas('activity_logs', [
+            'actor_id' => $guard->id,
+            'action' => 'Guard student search result disclosed',
+            'subject_type' => 'User',
+            'subject_id' => $student->id,
+        ]);
+        $this->assertDatabaseMissing('activity_logs', [
+            'action' => 'Guard student search result disclosed',
+            'subject_id' => $inactive->id,
+        ]);
+
+        $this->actingAs($guard)->get('/guard/student-tracking/'.$inactive->id)->assertNotFound();
+    }
+
+    public function test_guard_schedule_displays_saved_section_and_counts_only_matching_students(): void
+    {
+        $this->travelTo(now()->setDate(2026, 10, 7)->setTime(9, 30));
+        $guard = User::factory()->create(['role' => 'guard', 'status' => 'Active']);
+        $owner = User::factory()->create(['role' => 'instructor', 'status' => 'Active']);
+        $matching = User::factory()->create(['role' => 'student', 'status' => 'Active', 'section' => '4C']);
+        $otherSection = User::factory()->create(['role' => 'student', 'status' => 'Active', 'section' => '4D']);
+        $schedule = $this->schedule($owner, ['section' => '4C']);
+        $matching->registeredSchedules()->attach($schedule->id);
+        $otherSection->registeredSchedules()->attach($schedule->id);
+
+        $this->actingAs($guard)->get('/guard/dashboard')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('classes.0.section', '4C')
+                ->where('classes.0.studentCount', 1));
+        $this->actingAs($guard)->get('/guard/classes/'.$schedule->id)->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('classDetails.section', '4C')
+                ->missing('students')
+                ->where('statistics.total', 1));
     }
 }

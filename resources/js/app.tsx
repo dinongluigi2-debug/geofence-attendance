@@ -9,7 +9,8 @@ import InstructorLayout from '@/layouts/instructor-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import StudentLayout from '@/layouts/student-layout';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName =
+    'CampusTrack: A GPS-Based Class Attendance System with QR Code Verification for Information Technology Students at Pampanga State University – Lubao Campus';
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),

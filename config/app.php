@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => 'CampusTrack: A GPS-Based Class Attendance System with QR Code Verification for Information Technology Students at Pampanga State University – Lubao Campus',
 
     /*
     |--------------------------------------------------------------------------

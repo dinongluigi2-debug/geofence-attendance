@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\StudentRegistrationLink;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -19,6 +20,7 @@ class AdviserAssignmentTest extends TestCase
         $sameGroup = User::factory()->create(['role' => 'student', 'year' => ' 4TH YEAR ', 'section' => ' 4c ', 'adviser' => null]);
         $otherSection = User::factory()->create(['role' => 'student', 'year' => '4th year', 'section' => '4D', 'adviser' => 'Existing adviser']);
         $otherYear = User::factory()->create(['role' => 'student', 'year' => '3rd year', 'section' => '4C', 'adviser' => null]);
+        $inactive = User::factory()->create(['role' => 'student', 'status' => 'Inactive', 'year' => '4th year', 'section' => '4C', 'adviser' => null]);
 
         $this->actingAs($admin)->put(route('admin.users.assign-adviser'), [
             'year' => '4th year', 'section' => '4C', 'instructor_id' => $instructor->id,
@@ -27,6 +29,7 @@ class AdviserAssignmentTest extends TestCase
         $this->assertSame($instructor->name, $sameGroup->fresh()->adviser);
         $this->assertSame('Existing adviser', $otherSection->fresh()->adviser);
         $this->assertNull($otherYear->fresh()->adviser);
+        $this->assertNull($inactive->fresh()->adviser);
         $this->assertNull($instructor->fresh()->adviser);
         $this->assertDatabaseHas('activity_logs', ['actor_id' => $admin->id, 'subject_id' => $student->id, 'action' => 'Profile updated']);
 
@@ -64,5 +67,40 @@ class AdviserAssignmentTest extends TestCase
                 'year' => '4th year', 'section' => '4C', 'instructor_id' => $instructor->id,
             ])->assertForbidden();
         }
+    }
+
+    public function test_new_signup_is_listed_and_can_be_assigned_after_academic_registration(): void
+    {
+        $this->post(route('register.store'), [
+            'name' => 'New Student', 'email' => 'new.student@example.com',
+            'password' => 'password', 'password_confirmation' => 'password',
+        ])->assertRedirect();
+        $student = User::where('email', 'new.student@example.com')->firstOrFail();
+        $student->forceFill(['created_at' => now()->addMinute()])->saveQuietly();
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'Active']);
+        $instructor = User::factory()->create(['role' => 'instructor', 'status' => 'Active']);
+        $link = StudentRegistrationLink::create([
+            'instructor_id' => $instructor->id, 'token' => str_repeat('c', 64), 'is_active' => true,
+        ]);
+
+        $this->actingAs($admin)->get('/admin/users')->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('users', 3)
+                ->where('users.0.id', $student->id)
+                ->where('users.0.role', 'student'));
+        $this->put('/admin/users/assign-adviser', [
+            'year' => '4th Year', 'section' => '4C', 'instructor_id' => $instructor->id,
+        ])->assertSessionHasErrors('section');
+
+        $this->actingAs($student)->post('/student/registration', [
+            'token' => $link->token, 'full_name' => 'New Student', 'student_number' => '2026-0042',
+            'email' => 'new.student@example.com', 'course' => 'BSIT', 'year_level' => '4th Year', 'section' => '4C',
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAs($admin)->put('/admin/users/assign-adviser', [
+            'year' => '4th Year', 'section' => '4C', 'instructor_id' => $instructor->id,
+        ])->assertSessionHasNoErrors();
+        $this->assertSame($instructor->id, $student->fresh()->adviser_id);
+        $this->assertSame('4C', $student->fresh()->section);
     }
 }

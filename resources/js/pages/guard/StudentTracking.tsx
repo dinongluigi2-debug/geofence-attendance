@@ -37,6 +37,7 @@ type Summary = {
 type PageProps = {
     students?: StudentItem[];
     summary?: Summary;
+    search?: string;
 };
 
 const statusClasses: Record<StudentStatus, string> = {
@@ -48,8 +49,9 @@ const statusClasses: Record<StudentStatus, string> = {
 };
 
 export default function GuardStudentTrackingPage() {
-    const { students = [], summary } = usePage<PageProps>().props as PageProps;
-    const [search, setSearch] = useState('');
+    const { students = [], summary, search: initialSearch = '' } =
+        usePage<PageProps>().props as PageProps;
+    const [search, setSearch] = useState(initialSearch);
     const [groupFilter, setGroupFilter] = useState('All');
 
     function yearSection(student: StudentItem): string {
@@ -132,10 +134,10 @@ export default function GuardStudentTrackingPage() {
                                     Guard Instructions
                                 </h3>
                                 <p className="mt-1 text-sm leading-6 text-[#4d2a33]">
-                                    Search by student name or student number to
-                                    review the student’s current status using
-                                    real class schedules and live attendance
-                                    records.
+                                    Before searching or sharing details, verify
+                                    the caller’s identity and authority under
+                                    campus procedures. Searches and disclosed
+                                    student records are logged.
                                 </p>
                             </div>
                         </div>
@@ -184,7 +186,21 @@ export default function GuardStudentTrackingPage() {
                         </div>
                     </div>
 
-                    <div className="rounded-2xl border border-[#ecd9dc] bg-white p-4 shadow-sm">
+                    <form
+                        className="rounded-2xl border border-[#ecd9dc] bg-white p-4 shadow-sm"
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            router.get(
+                                '/guard/student-tracking',
+                                { search: search.trim() },
+                                {
+                                    preserveState: true,
+                                    preserveScroll: true,
+                                    replace: true,
+                                },
+                            );
+                        }}
+                    >
                         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                             <label className="relative block w-full max-w-lg">
                                 <Search
@@ -235,8 +251,11 @@ export default function GuardStudentTrackingPage() {
                                     ))}
                                 </select>
                             </label>
+                            <button className="h-12 rounded-xl bg-[#7d0b1c] px-5 font-semibold text-white">
+                                Search student
+                            </button>
                         </div>
-                    </div>
+                    </form>
 
                     <div className="overflow-hidden rounded-2xl border border-[#ecd9dc] bg-white shadow-sm">
                         <div className="overflow-x-auto">
@@ -270,8 +289,11 @@ export default function GuardStudentTrackingPage() {
                                                 colSpan={6}
                                                 className="px-4 py-8 text-center text-gray-500"
                                             >
-                                                No students match the current
-                                                search.
+                                                {initialSearch.trim() === ''
+                                                    ? 'Search by student name or student number to view a permitted inquiry.'
+                                                    : students.length === 0
+                                                      ? 'No active student matched this inquiry.'
+                                                    : 'No students match the selected name, number, year, or section. Clear or change the filters to see more students.'}
                                             </td>
                                         </tr>
                                     ) : (

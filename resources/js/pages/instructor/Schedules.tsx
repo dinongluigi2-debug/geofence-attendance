@@ -15,6 +15,7 @@ import { useState } from 'react';
 type Schedule = {
     id: number;
     subject: string;
+    section?: string | null;
     instructor?: string;
     start_time?: string;
     startTime?: string;
@@ -32,6 +33,7 @@ type Schedule = {
 };
 type Props = {
     instructorSchedules?: Schedule[];
+    sections?: string[];
     auth?: { user?: { name?: string } };
     errors?: Record<string, string>;
 };
@@ -47,6 +49,7 @@ const DAYS = [
 const SHORT = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const blank = () => ({
     subject: '',
+    section: '',
     students: '',
     start_time: '',
     end_time: '',
@@ -70,6 +73,7 @@ const time = (v?: string) => {
 export default function Schedules() {
     const {
         instructorSchedules = [],
+        sections = [],
         auth,
         errors = {},
     } = usePage().props as Props;
@@ -102,6 +106,7 @@ export default function Schedules() {
         setEdit(s);
         setForm({
             subject: s.subject,
+            section: s.section ?? '',
             students: String(s.students),
             start_time: s.start_time || s.startTime?.slice(0, 5) || '',
             end_time: s.end_time || s.endTime?.slice(0, 5) || '',
@@ -162,6 +167,7 @@ export default function Schedules() {
         setBusy(true);
         const payload = {
             ...form,
+            section: form.section.trim(),
             instructor: auth?.user?.name || 'Instructor',
             coordinates: `${form.latitude}, ${form.longitude}`,
         };
@@ -269,6 +275,9 @@ export default function Schedules() {
                                             auth?.user?.name ||
                                             'Instructor'}
                                     </p>
+                                    <p className="text-sm font-medium text-[#850027]">
+                                        Section: {s.section || 'Not assigned'}
+                                    </p>
                                     <div className="mt-5 space-y-3.5 text-lg text-slate-600">
                                         <p className="flex gap-3">
                                             <Clock className="text-slate-400" />
@@ -375,6 +384,29 @@ export default function Schedules() {
                                         }
                                         placeholder="e.g., Mathematics 101"
                                     />
+                                </Field>
+                                <Field label="Section" error={errors.section}>
+                                    <input
+                                        required
+                                        list="student-sections"
+                                        value={form.section}
+                                        onChange={(e) =>
+                                            field('section', e.target.value)
+                                        }
+                                        placeholder="Select or enter a section, e.g. 4C"
+                                    />
+                                    <datalist id="student-sections">
+                                        {sections.map((section) => (
+                                            <option
+                                                key={section}
+                                                value={section}
+                                            />
+                                        ))}
+                                    </datalist>
+                                    <small>
+                                        Use the section recorded on student
+                                        profiles.
+                                    </small>
                                 </Field>
                                 <Field
                                     label="Number of Students"

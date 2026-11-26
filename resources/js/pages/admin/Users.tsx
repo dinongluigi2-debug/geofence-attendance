@@ -90,8 +90,16 @@ export default function Users() {
     const studentSections = uniqueGroups(
         studentUsers.map((user) => user.section || ''),
     );
+    const assignableStudents = studentUsers.filter(
+        (user) =>
+            user.status === 'Active' &&
+            !!user.year?.trim() &&
+            user.year.trim() !== '-' &&
+            !!user.section?.trim() &&
+            user.section.trim() !== '-',
+    );
     const assignSections = uniqueGroups(
-        studentUsers
+        assignableStudents
             .filter(
                 (user) =>
                     normalizeGroup(user.year || '') ===
@@ -99,7 +107,7 @@ export default function Users() {
             )
             .map((user) => user.section || ''),
     );
-    const assignmentCount = studentUsers.filter(
+    const assignmentCount = assignableStudents.filter(
         (user) =>
             normalizeGroup(user.year || '') === normalizeGroup(assignYear) &&
             normalizeGroup(user.section || '') ===
@@ -374,6 +382,15 @@ export default function Users() {
                     </div>
 
                     <div className="mt-5 border-t pt-5">
+                        <p className="mb-3 text-sm text-gray-600">
+                            Newly created accounts appear in this user list
+                            right away. To assign an adviser by year and
+                            section, the student must first complete Student
+                            Registration (student number, year, and section)
+                            using the instructor-provided registration link,
+                            or an administrator must enter those details in the
+                            student account.
+                        </p>
                         <div className="grid items-center gap-4 lg:grid-cols-[130px_1fr_1fr_260px]">
                             <label className="text-lg font-bold text-gray-800">
                                 Assign Adviser:
@@ -388,7 +405,11 @@ export default function Users() {
                                 className="rounded-xl border bg-white px-4 py-3 text-lg text-gray-900"
                             >
                                 <option value="">Year Level</option>
-                                {studentYears.map((value) => (
+                                {uniqueGroups(
+                                    assignableStudents.map(
+                                        (user) => user.year || '',
+                                    ),
+                                ).map((value) => (
                                     <option key={value} value={value}>
                                         {value}
                                     </option>
@@ -424,9 +445,9 @@ export default function Users() {
                 </div>
 
                 <p className="mb-4 text-sm text-gray-600">
-                    Adviser assignment uses existing student records. Choose a
-                    year level and section; all matching students will receive
-                    the selected adviser.
+                    Adviser assignment uses active student accounts with saved
+                    year and section values. Choose a year level and section;
+                    all matching students will receive the selected adviser.
                 </p>
                 <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm">
                     <table className="w-full min-w-[900px] table-fixed text-left">

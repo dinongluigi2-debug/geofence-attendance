@@ -98,6 +98,7 @@ class UserController extends Controller
                 throw ValidationException::withMessages(['instructor_id' => 'Choose an active instructor.']);
             }
             $students = User::where('role', 'student')
+                ->where('status', 'Active')
                 ->whereRaw('LOWER(TRIM(year)) = ?', [strtolower(trim($validated['year']))])
                 ->whereRaw('LOWER(TRIM(section)) = ?', [strtolower(trim($validated['section']))])
                 ->lockForUpdate()->get();

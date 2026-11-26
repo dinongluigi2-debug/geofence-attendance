@@ -51,44 +51,28 @@ class GuardDashboardController extends Controller
     {
         $now = now('Asia/Manila');
         $today = $now->toDateString();
+        abort_unless($this->statusService->todaySchedules($now)->contains('id', $schedule->id), 404);
 
-        $students = $schedule->registeredStudents->sortBy('name');
+        $students = $schedule->registeredStudents
+            ->filter(function ($student) use ($schedule): bool {
+                if ($student->role !== 'student' || $student->status !== 'Active') {
+                    return false;
+                }
+
+                return blank($schedule->section) ||
+                    strtolower(trim((string) $student->section)) === strtolower(trim((string) $schedule->section));
+            });
+        $studentIds = $students->pluck('id');
 
         $attendanceRecords = Attendance::query()
             ->where('schedule_id', $schedule->id)
+            ->whereIn('student_id', $studentIds)
             ->whereDate('attendance_date', $today)
             ->get()
             ->keyBy('student_id');
-
-        $studentRows = $students
-            ->map(function ($student) use ($attendanceRecords): array {
-                $attendance = $attendanceRecords->get($student->id);
-                $status = 'Absent';
-
-                if ($attendance) {
-                    $status = match (strtolower(trim((string) $attendance->status))) {
-                        'present' => 'Present',
-                        'late' => 'Late',
-                        default => 'Absent',
-                    };
-                }
-
-                return [
-                    'id' => $student->id,
-                    'name' => $student->name,
-                    'studentNumber' => $student->student_id ?: 'Not assigned',
-                    'course' => $student->course ?: 'N/A',
-                    'year' => $student->year ?: 'N/A',
-                    'section' => $student->section ?: 'N/A',
-                    'status' => $status,
-                ];
-            })
-            ->values()
-            ->all();
-
-        $present = count(array_filter($studentRows, fn (array $student): bool => $student['status'] === 'Present'));
-        $late = count(array_filter($studentRows, fn (array $student): bool => $student['status'] === 'Late'));
-        $absent = count(array_filter($studentRows, fn (array $student): bool => $student['status'] === 'Absent'));
+        $present = $attendanceRecords->where('status', 'Present')->count();
+        $late = $attendanceRecords->where('status', 'Late')->count();
+        $absent = max(0, $students->count() - $present - $late);
 
         return Inertia::render('guard/ClassDetails', [
             'classDetails' => [
@@ -104,9 +88,8 @@ class GuardDashboardController extends Controller
                     $now
                 ),
             ],
-            'students' => $studentRows,
             'statistics' => [
-                'total' => count($studentRows),
+                'total' => $students->count(),
                 'present' => $present,
                 'late' => $late,
                 'absent' => $absent,

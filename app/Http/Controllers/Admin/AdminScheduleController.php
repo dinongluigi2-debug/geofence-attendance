@@ -19,6 +19,15 @@ class AdminScheduleController extends Controller
 
         return Inertia::render('admin/Schedules', [
             'instructors' => $instructors,
+            'sections' => User::query()
+                ->where('role', 'student')
+                ->where('status', 'Active')
+                ->whereNotNull('section')
+                ->whereRaw("TRIM(section) <> ''")
+                ->distinct()
+                ->orderBy('section')
+                ->pluck('section')
+                ->all(),
         ]);
     }
 
@@ -26,7 +35,7 @@ class AdminScheduleController extends Controller
     {
         $validated = $request->validate([
             'instructor_id' => 'required|integer|exists:users,id,role,instructor',
-            'section' => 'nullable|string|max:100',
+            'section' => 'required|string|max:100',
             'subject' => 'required|string|max:255',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',

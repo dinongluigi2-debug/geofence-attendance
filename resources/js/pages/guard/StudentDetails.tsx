@@ -1,6 +1,5 @@
-import { Head, Link, usePage, usePoll } from '@inertiajs/react';
-import { ArrowLeft, CalendarDays, Clock3 } from 'lucide-react';
-import ProfileAvatar from '@/components/profile-avatar';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { ArrowLeft, CalendarDays } from 'lucide-react';
 import GuardLayout from '@/layouts/guard-layout';
 
 type Schedule = {
@@ -13,303 +12,115 @@ type Schedule = {
     start_time: string;
     end_time: string;
     state: string;
+    attendance_status: string;
     next_session: { start: string; end: string } | null;
-};
-type RecordItem = {
-    id: number;
-    subject: string;
-    date: string | null;
-    status: string;
-    time_in: string | null;
-    time_out: string | null;
-    source: string;
 };
 type Props = {
     student: {
         id: number;
         name: string;
-        student_id: string;
-        course: string;
-        year: string;
-        section: string;
-        profile_picture_url: string | null;
+        student_id: string | null;
+        course: string | null;
+        year: string | null;
+        section: string | null;
     };
     schedules: Schedule[];
-    records: {
-        data: RecordItem[];
-        total: number;
-        current_page: number;
-        last_page: number;
-        prev_page_url: string | null;
-        next_page_url: string | null;
-    };
 };
-function dateTime(value: string) {
-    return new Date(value).toLocaleString('en-PH', {
-        timeZone: 'Asia/Manila',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-    });
-}
-function stateColor(state: string) {
-    return state === 'Ongoing'
-        ? 'bg-emerald-100 text-emerald-800'
-        : state === 'Pending'
-          ? 'bg-amber-100 text-amber-800'
-          : 'bg-gray-100 text-gray-600';
-}
+
 export default function StudentDetails() {
-    const { student, schedules, records } = usePage<Props>().props;
-    usePoll(30000, { only: ['schedules', 'records'] });
-    const ongoing = schedules.filter((item) => item.state === 'Ongoing');
-    const pending = schedules
-        .filter((item) => item.state === 'Pending')
-        .sort((a, b) =>
-            (a.next_session?.start ?? '').localeCompare(
-                b.next_session?.start ?? '',
-            ),
-        );
+    const { student, schedules } = usePage<Props>().props;
 
     return (
-        <GuardLayout
-            title="Student Details"
-            subtitle="Schedules, class activity, and attendance history"
-        >
-            <Head title={student.name + ' — Student Details'} />
-            <div className="w-full min-w-0 space-y-6 p-4 text-gray-900 sm:p-6 lg:p-8">
-                <Link
-                    href="/guard/student-tracking"
-                    className="inline-flex items-center gap-2 font-semibold text-[#7d0b1c]"
-                >
-                    <ArrowLeft size={18} /> Back to Student Tracking
-                </Link>
-                <section className="flex flex-wrap items-center gap-4 rounded-2xl border border-[#ecd9dc] bg-white p-5 shadow-sm">
-                    <ProfileAvatar
-                        name={student.name}
-                        url={student.profile_picture_url}
-                        className="size-20"
-                    />
-                    <div className="min-w-0">
-                        <h2 className="text-2xl font-bold break-words text-[#7d0b1c]">
+        <>
+            <Head title="Authorized Student Inquiry" />
+            <GuardLayout
+                title="Authorized Student Inquiry"
+                subtitle="Class schedule and attendance status for this inquiry"
+            >
+                <div className="w-full min-w-0 space-y-5 p-4 text-gray-900 sm:p-6 lg:p-8">
+                    <Link
+                        href="/guard/student-tracking"
+                        className="inline-flex items-center gap-2 font-semibold text-[#7d0b1c]"
+                    >
+                        <ArrowLeft size={18} /> Back to student search
+                    </Link>
+                    <p className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900">
+                        Share these details only after confirming the
+                        requester’s identity and authority under campus
+                        procedure. This disclosure has been recorded.
+                    </p>
+                    <section className="rounded-2xl border border-[#ecd9dc] bg-white p-5 shadow-sm">
+                        <h2 className="text-xl font-bold text-[#7d0b1c]">
                             {student.name}
                         </h2>
-                        <p className="mt-2 break-words text-gray-600">
+                        <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
                             {[
-                                student.student_id,
-                                student.course,
-                                student.year,
-                                student.section,
-                            ]
-                                .filter(Boolean)
-                                .join(' · ')}
-                        </p>
-                    </div>
-                </section>
-                <div className="grid gap-4 lg:grid-cols-2">
-                    <section className="rounded-2xl border border-[#ecd9dc] bg-white p-5">
-                        <h2 className="flex items-center gap-2 text-lg font-bold">
-                            <Clock3 size={20} /> Ongoing classes
-                        </h2>
-                        {ongoing.length ? (
-                            ongoing.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="mt-4 rounded-xl bg-emerald-50 p-4"
-                                >
-                                    <p className="font-bold text-emerald-900">
-                                        {item.subject}
-                                    </p>
-                                    <p className="mt-1 text-sm">
-                                        {item.instructor} ·{' '}
-                                        {item.location || 'Location not set'}
-                                    </p>
-                                    <p className="mt-1 text-sm">
-                                        Until{' '}
-                                        {item.next_session &&
-                                            dateTime(item.next_session.end)}
-                                    </p>
+                                ['Student number', student.student_id],
+                                ['Course', student.course],
+                                ['Year level', student.year],
+                                ['Section', student.section],
+                            ].map(([label, value]) => (
+                                <div key={label}>
+                                    <dt className="font-semibold text-gray-500">
+                                        {label}
+                                    </dt>
+                                    <dd className="mt-1">{value || 'Not set'}</dd>
                                 </div>
-                            ))
-                        ) : (
-                            <p className="mt-4 text-sm text-gray-500">
-                                No ongoing class right now.
-                            </p>
-                        )}
+                            ))}
+                        </dl>
                     </section>
-                    <section className="rounded-2xl border border-[#ecd9dc] bg-white p-5">
+                    <section className="rounded-2xl border border-[#ecd9dc] bg-white p-5 shadow-sm">
                         <h2 className="flex items-center gap-2 text-lg font-bold">
-                            <CalendarDays size={20} /> Next pending class
+                            <CalendarDays size={20} /> Relevant class schedule
+                            and today’s attendance status
                         </h2>
-                        {pending[0] ? (
-                            <div className="mt-4 rounded-xl bg-amber-50 p-4">
-                                <p className="font-bold text-amber-900">
-                                    {pending[0].subject}
+                        <p className="mt-1 text-sm text-gray-500">
+                            Only active class schedules and today’s status are
+                            shown. Historical attendance is not available in
+                            the Guard Portal.
+                        </p>
+                        <div className="mt-4 space-y-3">
+                            {schedules.map((item) => (
+                                <article
+                                    key={item.id}
+                                    className="rounded-xl border border-gray-200 p-4"
+                                >
+                                    <div className="flex flex-wrap items-start justify-between gap-2">
+                                        <h3 className="font-bold">
+                                            {item.subject}
+                                        </h3>
+                                        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold">
+                                            {item.state}
+                                        </span>
+                                    </div>
+                                    <p className="mt-2 text-sm text-gray-600">
+                                        Section: {item.section || 'Not set'} ·{' '}
+                                        {item.days.join(', ') || 'Days not set'} ·{' '}
+                                        {item.start_time}-{item.end_time}
+                                    </p>
+                                    {(item.state === 'Ongoing' ||
+                                        item.state === 'Pending') && (
+                                        <p className="mt-1 text-sm text-gray-600">
+                                            Expected classroom:{' '}
+                                            {item.location || 'Not set'}
+                                        </p>
+                                    )}
+                                    <p className="mt-2 text-sm">
+                                        Today’s attendance:{' '}
+                                        <strong>{item.attendance_status}</strong>
+                                    </p>
+                                </article>
+                            ))}
+                            {!schedules.length && (
+                                <p className="rounded-lg bg-gray-50 p-4 text-sm text-gray-600">
+                                    No active class schedule is available for
+                                    this student.
                                 </p>
-                                <p className="mt-1 text-sm">
-                                    {pending[0].instructor} ·{' '}
-                                    {pending[0].location || 'Location not set'}
-                                </p>
-                                <p className="mt-1 text-sm">
-                                    {pending[0].next_session &&
-                                        dateTime(pending[0].next_session.start)}
-                                </p>
-                            </div>
-                        ) : (
-                            <p className="mt-4 text-sm text-gray-500">
-                                No pending class scheduled.
-                            </p>
-                        )}
+                            )}
+                        </div>
                     </section>
                 </div>
-                <section className="rounded-2xl border border-[#ecd9dc] bg-white p-5">
-                    <h2 className="text-lg font-bold">
-                        All registered schedules ({schedules.length})
-                    </h2>
-                    <p className="mt-1 text-sm text-gray-500">
-                        Class times use Philippine time. Activity refreshes
-                        every 30 seconds.
-                    </p>
-                    <div className="mt-4 grid gap-4 xl:grid-cols-2">
-                        {schedules.map((item) => (
-                            <article
-                                key={item.id}
-                                className="min-w-0 rounded-xl border border-gray-200 p-4"
-                            >
-                                <div className="flex flex-wrap items-start justify-between gap-2">
-                                    <h3 className="font-bold break-words">
-                                        {item.subject}
-                                    </h3>
-                                    <span
-                                        className={
-                                            'rounded-full px-3 py-1 text-xs font-semibold ' +
-                                            stateColor(item.state)
-                                        }
-                                    >
-                                        {item.state}
-                                    </span>
-                                </div>
-                                <p className="mt-2 text-sm break-words text-gray-600">
-                                    {item.instructor} ·{' '}
-                                    {item.location || 'Location not set'}
-                                </p>
-                                <p className="mt-2 text-sm">
-                                    {item.days.join(', ') || 'Days not set'} ·{' '}
-                                    {item.start_time}–{item.end_time}
-                                </p>
-                                {item.next_session && (
-                                    <p className="mt-2 text-sm text-[#7d0b1c]">
-                                        {item.state === 'Ongoing'
-                                            ? 'Started: '
-                                            : 'Next: '}
-                                        {dateTime(item.next_session.start)}
-                                    </p>
-                                )}
-                            </article>
-                        ))}
-                    </div>
-                    {!schedules.length && (
-                        <p className="mt-4 text-sm text-gray-500">
-                            No registered schedules.
-                        </p>
-                    )}
-                </section>
-                <section className="overflow-hidden rounded-2xl border border-[#ecd9dc] bg-white">
-                    <h2 className="p-5 text-lg font-bold">
-                        Attendance history ({records.total} records)
-                    </h2>
-                    <div className="overflow-x-auto">
-                        <table className="w-full min-w-[650px] text-left text-sm">
-                            <thead className="bg-[#fff5f6] text-[#7d0b1c]">
-                                <tr>
-                                    {[
-                                        'Date',
-                                        'Subject',
-                                        'Status',
-                                        'Time in',
-                                        'Time out',
-                                        'Recorded via',
-                                    ].map((label) => (
-                                        <th key={label} className="px-4 py-3">
-                                            {label}
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {records.data.map((item) => (
-                                    <tr
-                                        key={item.id}
-                                        className="border-t border-gray-100"
-                                    >
-                                        <td className="px-4 py-3">
-                                            {item.date || '—'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {item.subject}
-                                        </td>
-                                        <td className="px-4 py-3 font-semibold">
-                                            {item.status}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {item.time_in || '—'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {item.time_out || '—'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {item.source}
-                                        </td>
-                                    </tr>
-                                ))}
-                                {!records.data.length && (
-                                    <tr>
-                                        <td
-                                            colSpan={6}
-                                            className="px-4 py-8 text-center text-gray-500"
-                                        >
-                                            No attendance records yet.
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    {records.last_page > 1 && (
-                        <nav
-                            aria-label="Attendance history pages"
-                            className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm"
-                        >
-                            <span>
-                                Page {records.current_page} of{' '}
-                                {records.last_page}
-                            </span>
-                            <div className="flex gap-3">
-                                {records.prev_page_url && (
-                                    <Link
-                                        preserveScroll
-                                        href={records.prev_page_url}
-                                        className="rounded-lg border px-3 py-2"
-                                    >
-                                        Previous
-                                    </Link>
-                                )}
-                                {records.next_page_url && (
-                                    <Link
-                                        preserveScroll
-                                        href={records.next_page_url}
-                                        className="rounded-lg border px-3 py-2"
-                                    >
-                                        Next
-                                    </Link>
-                                )}
-                            </div>
-                        </nav>
-                    )}
-                </section>
-            </div>
-        </GuardLayout>
+            </GuardLayout>
+        </>
     );
 }

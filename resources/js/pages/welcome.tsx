@@ -96,7 +96,7 @@ export default function Welcome({ canRegister = true }: WelcomeProps) {
 
     return (
         <>
-            <Head title="PSU Attendance" />
+            <Head title="CampusTrack" />
 
             <div className="min-h-screen bg-[#970027] text-white [color-scheme:light]">
                 {/* Decorative background */}
@@ -118,11 +118,11 @@ export default function Welcome({ canRegister = true }: WelcomeProps) {
 
                                 <span>
                                     <span className="block text-xl leading-tight font-bold text-white">
-                                        PSU Attendance
+                                        CampusTrack
                                     </span>
 
                                     <span className="mt-1 block text-xs font-semibold tracking-[0.16em] text-[#f5a8ba] uppercase">
-                                        Attendance Monitoring System
+                                        GPS and QR Class Attendance
                                     </span>
                                 </span>
                             </Link>
@@ -133,18 +133,14 @@ export default function Welcome({ canRegister = true }: WelcomeProps) {
                             </div>
 
                             <h1 className="max-w-3xl text-4xl leading-[1.12] font-bold text-white sm:text-5xl xl:text-6xl">
-                                Automated Student Attendance
-                                <span className="text-[#ffd600]">
-                                    {' '}
-                                    and Location Tracking
-                                </span>
+                                CampusTrack
                             </h1>
 
                             <p className="mt-7 max-w-2xl text-base leading-8 text-[#f5c2cf] sm:text-lg">
-                                A secure GPS-based system designed to simplify
-                                attendance monitoring for students and
-                                instructors using real-time location
-                                verification.
+                                CampusTrack: A GPS-Based Class Attendance
+                                System with QR Code Verification for Information
+                                Technology Students at Pampanga State
+                                University – Lubao Campus
                             </p>
 
                             {/* Features */}
@@ -316,7 +312,7 @@ export default function Welcome({ canRegister = true }: WelcomeProps) {
                             </div>
 
                             <p className="mt-5 text-center text-xs text-slate-400">
-                                PSU Attendance Monitoring System
+                                CampusTrack
                             </p>
                         </section>
                     </div>

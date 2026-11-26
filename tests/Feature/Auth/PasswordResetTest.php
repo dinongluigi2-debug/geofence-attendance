@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
 
@@ -36,6 +37,20 @@ class PasswordResetTest extends TestCase
         $this->post(route('password.email'), ['email' => $user->email]);
 
         Notification::assertSentTo($user, ResetPassword::class);
+    }
+
+    public function test_password_reset_delivery_exception_returns_a_safe_form_error(): void
+    {
+        Password::shouldReceive('broker')->once()->andThrow(new \RuntimeException('private transport detail'));
+
+        $response = $this->from('/forgot-password')->post(route('password.email'), [
+            'email' => 'person@example.com',
+        ]);
+
+        $response->assertRedirect('/forgot-password')
+            ->assertSessionHasErrors([
+                'email' => 'Password reset email is temporarily unavailable. Please try again later or contact support.',
+            ]);
     }
 
     public function test_reset_password_screen_can_be_rendered()

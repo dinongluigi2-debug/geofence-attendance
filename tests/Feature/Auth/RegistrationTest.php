@@ -40,4 +40,20 @@ class RegistrationTest extends TestCase
             'role' => 'student',
         ]);
     }
+
+    public function test_password_mismatch_is_reported_on_confirmation_field(): void
+    {
+        $response = $this->from('/register')->post(route('register.store'), [
+            'name' => 'Test User',
+            'email' => 'mismatch@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'different-password',
+        ]);
+
+        $response->assertRedirect('/register')
+            ->assertSessionHasErrors([
+                'password_confirmation' => 'The password confirmation does not match.',
+            ]);
+        $this->assertDatabaseMissing('users', ['email' => 'mismatch@example.com']);
+    }
 }

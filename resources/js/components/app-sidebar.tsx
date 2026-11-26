@@ -137,7 +137,7 @@ export function AppSidebar({ items }: { items: SidebarLink[] }) {
 
                     <div className="min-w-0 group-data-[collapsible=icon]:hidden">
                         <h1 className="text-[19px] leading-tight font-bold whitespace-nowrap text-white">
-                            PSU Attendance
+                            CampusTrack
                         </h1>
 
                         <p className="mt-1 text-xs font-semibold tracking-[0.12em] whitespace-nowrap text-[#f6a7bb] uppercase">

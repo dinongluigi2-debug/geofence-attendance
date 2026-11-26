@@ -228,7 +228,7 @@ class SystemRepairTest extends TestCase
         $owner = User::factory()->create(['role' => 'instructor', 'status' => 'Active']);
         $other = User::factory()->create(['role' => 'instructor', 'status' => 'Active']);
         $payload = ['user_id' => $other->id, 'instructor_id' => $other->id, 'subject' => 'Biology',
-            'start_time' => '09:00', 'end_time' => '10:00', 'students' => 25, 'location' => 'Room 1',
+            'section' => '4C', 'start_time' => '09:00', 'end_time' => '10:00', 'students' => 25, 'location' => 'Room 1',
             'coordinates' => '14.5995, 120.9842', 'radius' => 50, 'days' => ['Tuesday'], 'status' => 'Scheduled'];
         $this->actingAs($owner)->post('/schedules', $payload)->assertSessionHasNoErrors()->assertRedirect();
         $this->assertDatabaseHas('schedules', ['subject' => 'Biology', 'user_id' => $owner->id, 'instructor' => $owner->name]);
@@ -276,7 +276,7 @@ class SystemRepairTest extends TestCase
         $schedule = $this->schedule($owner);
         $admin = User::factory()->create(['role' => 'admin']);
         $payload = ['instructor_id' => $owner->id, 'subject' => 'Updated Biology', 'start_time' => '09:00', 'end_time' => '10:00',
-            'students' => 25, 'location' => 'Room 1', 'coordinates' => '14.5995, 120.9842', 'radius' => 50, 'days' => ['Tuesday']];
+            'section' => '4C', 'students' => 25, 'location' => 'Room 1', 'coordinates' => '14.5995, 120.9842', 'radius' => 50, 'days' => ['Tuesday']];
         $this->actingAs($admin)->put("/admin/schedules/{$schedule->id}", $payload)->assertSessionHasNoErrors();
         $this->assertSame('Updated Biology', $schedule->refresh()->subject);
         $this->actingAs(User::factory()->create(['role' => 'student']))->deleteJson("/admin/schedules/{$schedule->id}")->assertForbidden();

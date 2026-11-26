@@ -25,8 +25,13 @@ class CreateNewUser implements CreatesNewUsers
                 'in:student',
             ],
 
-            'password' => $this->passwordRules(),
-
+            'password' => array_values(array_filter(
+                $this->passwordRules(),
+                fn ($rule) => $rule !== 'confirmed'
+            )),
+            'password_confirmation' => ['required', 'same:password'],
+        ], [
+            'password_confirmation.same' => 'The password confirmation does not match.',
         ])->validate();
 
         return User::create([

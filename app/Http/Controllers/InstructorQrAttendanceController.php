@@ -19,7 +19,7 @@ class InstructorQrAttendanceController extends Controller
         $validated = $request->validate(['token' => ['required', 'string', 'size:64']]);
         $student = User::query()->where('student_qr_token_hash', hash('sha256', $validated['token']))->where('role', 'student')->first();
 
-        abort_unless($student && strtolower((string) $student->status) !== 'inactive', 404, 'This student QR code is invalid or has been revoked.');
+        abort_unless($student && strtolower((string) $student->status) === 'active' && $student->student_qr_revoked_at === null, 404, 'This student QR code is invalid or has been revoked.');
 
         $enrollment = $schedule->registeredStudents()
             ->where('users.id', $student->id)
@@ -90,7 +90,7 @@ class InstructorQrAttendanceController extends Controller
         ]);
 
         $student = User::query()->where('student_qr_token_hash', hash('sha256', $validated['token']))->where('role', 'student')->first();
-        abort_unless($student && strtolower((string) $student->status) !== 'inactive', 404, 'This student QR code is invalid or has been revoked.');
+        abort_unless($student && strtolower((string) $student->status) === 'active' && $student->student_qr_revoked_at === null, 404, 'This student QR code is invalid or has been revoked.');
 
         $isEnrolled = $schedule->registeredStudents()
             ->where('users.id', $student->id)
@@ -196,7 +196,7 @@ class InstructorQrAttendanceController extends Controller
 
     private function isActiveEnrollee(Schedule $schedule, User $student): bool
     {
-        return $student->role === 'student' && $schedule->registeredStudents()
+        return $student->role === 'student' && strtolower((string) $student->status) === 'active' && $schedule->registeredStudents()
             ->where('users.id', $student->id)
             ->where(function ($query): void {
                 $query->whereNull('schedule_student.status')->orWhereRaw('LOWER(schedule_student.status) = ?', ['active']);

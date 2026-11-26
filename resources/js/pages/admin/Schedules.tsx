@@ -42,10 +42,11 @@ type Instructor = {
 
 type PageProps = {
     instructors: Instructor[];
+    sections?: string[];
 };
 
 export default function Schedules() {
-    const { instructors = [] } = usePage<PageProps>().props;
+    const { instructors = [], sections = [] } = usePage<PageProps>().props;
 
     const days = [
         'Monday',
@@ -326,6 +327,9 @@ export default function Schedules() {
                                                         'Scheduled'}
                                                 </span>
                                             </div>
+                                            <p className="text-sm font-medium text-[#850027]">
+                                                Section: {schedule.section || 'Not assigned'}
+                                            </p>
 
                                             <div className="flex items-center gap-2 text-gray-700">
                                                 <Clock size={16} />
@@ -442,12 +446,18 @@ export default function Schedules() {
                             <label className="grid gap-1">
                                 Section
                                 <input
+                                    required
+                                    list="admin-student-sections"
                                     value={form.data.section}
                                     onChange={(e) =>
                                         form.setData('section', e.target.value)
                                     }
                                     className="rounded-lg border p-2"
                                 />
+                                <small className="text-gray-500">
+                                    Choose a section already recorded on
+                                    student profiles when possible.
+                                </small>
                             </label>
                             <label className="grid gap-1">
                                 Students
@@ -589,6 +599,17 @@ export default function Schedules() {
                                 {form.processing ? 'Saving…' : 'Save Schedule'}
                             </button>
                         </fieldset>
+                        <datalist id="admin-student-sections">
+                            {Array.from(
+                                new Set(
+                                    [...sections, form.data.section].filter(
+                                        Boolean,
+                                    ),
+                                ),
+                            ).map((section) => (
+                                <option key={section} value={section} />
+                            ))}
+                        </datalist>
                     </form>
                 </div>
             )}
