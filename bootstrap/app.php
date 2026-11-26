@@ -20,6 +20,11 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
 
+        // Render terminates TLS at its proxy and forwards the original scheme.
+        // Trust the proxy headers so Laravel generates HTTPS URLs for assets,
+        // redirects, and signed links in production.
+        $middleware->trustProxies(at: '*');
+
         /*
         |--------------------------------------------------------------------------
         | Custom Middleware Aliases
