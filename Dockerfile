@@ -16,6 +16,8 @@ RUN mkdir -p bootstrap/cache storage/app/public storage/app/private storage/fram
     && npm ci && npm run build
 FROM php:8.4-apache-bookworm AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends libzip4 libpng16-16 libjpeg62-turbo libfreetype6 libonig5 libxml2 libpq5 supervisor \
+    && (getent group 1000 >/dev/null || groupadd -g 1000 render-secrets) \
+    && usermod -aG 1000 www-data \
     && rm -rf /var/lib/apt/lists/* && a2enmod rewrite headers
 COPY --from=build /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=build /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/

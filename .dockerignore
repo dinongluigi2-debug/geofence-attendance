@@ -17,5 +17,6 @@ storage/**
 database/*.sqlite
 database/*.sqlite-*
 auth.json
+tidb-ca.pem
 *.zip
 *.log
