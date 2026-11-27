@@ -19,7 +19,9 @@ class InstructorQrAttendanceController extends Controller
         $validated = $request->validate(['token' => ['required', 'string', 'size:64']]);
         $student = User::query()->where('student_qr_token_hash', hash('sha256', $validated['token']))->where('role', 'student')->first();
 
-        abort_unless($student && strtolower((string) $student->status) === 'active' && $student->student_qr_revoked_at === null, 404, 'This student QR code is invalid or has been revoked.');
+        abort_unless($student && strtolower((string) $student->status) === 'active'
+            && $student->student_qr_revoked_at === null
+            && $student->student_qr_expires_at?->isFuture(), 404, 'This student QR code is invalid, expired, or has been revoked.');
 
         $enrollment = $schedule->registeredStudents()
             ->where('users.id', $student->id)
@@ -60,7 +62,7 @@ class InstructorQrAttendanceController extends Controller
                     });
             })
             ->first() : null;
-        $alreadyPresent = $todayRecord && in_array(strtolower((string) $todayRecord->status), ['present', 'late'], true);
+        $attendanceExists = (bool) $todayRecord;
 
         return response()->json([
             'student' => [
@@ -70,11 +72,11 @@ class InstructorQrAttendanceController extends Controller
                 'section' => $enrollment->pivot->section ?: $student->section ?: 'Not assigned',
             ],
             'history' => $history,
-            'canRecord' => (bool) $session && ! $alreadyPresent && $schedule->recording
+            'canRecord' => (bool) $session && ! $attendanceExists && $schedule->recording
                 && in_array($schedule->status, ['Scheduled', 'Ongoing'], true),
-            'recordedToday' => (bool) $alreadyPresent,
+            'recordedToday' => $attendanceExists,
             'sessionDate' => $session[0] ?? null,
-            'message' => $alreadyPresent ? 'Attendance is already recorded for this session.'
+            'message' => $attendanceExists ? 'An attendance record already exists for this session.'
                 : (! $session ? 'Attendance can only be recorded during this class session.' : null),
         ]);
     }
@@ -90,7 +92,9 @@ class InstructorQrAttendanceController extends Controller
         ]);
 
         $student = User::query()->where('student_qr_token_hash', hash('sha256', $validated['token']))->where('role', 'student')->first();
-        abort_unless($student && strtolower((string) $student->status) === 'active' && $student->student_qr_revoked_at === null, 404, 'This student QR code is invalid or has been revoked.');
+        abort_unless($student && strtolower((string) $student->status) === 'active'
+            && $student->student_qr_revoked_at === null
+            && $student->student_qr_expires_at?->isFuture(), 404, 'This student QR code is invalid, expired, or has been revoked.');
 
         $isEnrolled = $schedule->registeredStudents()
             ->where('users.id', $student->id)
@@ -129,12 +133,12 @@ class InstructorQrAttendanceController extends Controller
                         });
                 })->lockForUpdate()->first();
 
-            if ($record && in_array(strtolower((string) $record->status), ['present', 'late'], true)) {
-                throw ValidationException::withMessages(['attendance' => 'Attendance is already recorded for this session.']);
+            if ($record) {
+                throw ValidationException::withMessages(['attendance' => 'An attendance record already exists for this session.']);
             }
 
             $status = $now->gt($classStart->copy()->addMinutes(config('attendance.grace_minutes'))) ? 'late' : 'present';
-            $record ??= new Attendance;
+            $record = new Attendance;
             $record->fill([
                 'student_id' => $student->id,
                 'schedule_id' => $lockedSchedule->id,
@@ -169,6 +173,7 @@ class InstructorQrAttendanceController extends Controller
         $student->forceFill([
             'student_qr_token_hash' => hash('sha256', $token),
             'student_qr_token_encrypted' => Crypt::encryptString($token),
+            'student_qr_expires_at' => now(config('app.timezone'))->addYear(),
             'student_qr_revoked_at' => null,
         ])->save();
 
@@ -182,6 +187,7 @@ class InstructorQrAttendanceController extends Controller
         $student->forceFill([
             'student_qr_token_hash' => null,
             'student_qr_token_encrypted' => null,
+            'student_qr_expires_at' => null,
             'student_qr_revoked_at' => now(),
         ])->save();
 

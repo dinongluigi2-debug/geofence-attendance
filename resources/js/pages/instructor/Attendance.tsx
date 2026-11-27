@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { csvCell } from '@/lib/csv';
+import QrAttendance from '@/components/instructor/qr-attendance';
 
 type Status = 'Present' | 'Absent' | 'Late';
 type AttendanceRecord = {
@@ -32,7 +33,10 @@ type AttendanceRecord = {
     coordinates: string;
     gpsLocked: boolean;
 };
-type PageProps = { instructorAttendanceRecords?: AttendanceRecord[] };
+type PageProps = {
+    instructorAttendanceRecords?: AttendanceRecord[];
+    qrSchedules?: { id: number; name: string; section: string | null }[];
+};
 const controlClass =
     'h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none transition focus:border-[#970027] focus:ring-2 focus:ring-[#970027]/10';
 const badgeClass = {
@@ -51,7 +55,9 @@ function displayDate(value: string) {
 }
 export default function Attendance() {
     usePoll(15000, { only: ['instructorAttendanceRecords'] });
-    const { instructorAttendanceRecords = [] } = usePage().props as PageProps;
+    const { instructorAttendanceRecords = [], qrSchedules = [] } = usePage()
+        .props as PageProps;
+    const [qrScheduleId, setQrScheduleId] = useState('');
     const [search, setSearch] = useState('');
     const [status, setStatus] = useState('All');
     const [classId, setClassId] = useState('All');
@@ -230,6 +236,55 @@ export default function Attendance() {
                         <Download size={18} /> Export CSV
                     </button>
                 </header>
+                <section className="rounded-2xl border border-[#ead0d7] bg-white p-4 shadow-sm sm:p-5">
+                    <div>
+                        <h2 className="text-lg font-bold text-[#850027]">
+                            GPS attendance fallback
+                        </h2>
+                        <p className="mt-1 text-sm text-gray-600">
+                            If GPS check-in is denied, unavailable, or too
+                            inaccurate, select the active class session below to
+                            verify the student by QR. GPS remains the primary
+                            check-in method.
+                        </p>
+                    </div>
+                    <label className="mt-4 block max-w-xl text-sm font-semibold text-gray-700">
+                        Class session
+                        <select
+                            value={qrScheduleId}
+                            onChange={(event) =>
+                                setQrScheduleId(event.target.value)
+                            }
+                            className={controlClass + ' mt-2'}
+                        >
+                            <option value="">
+                                Select a class before scanning
+                            </option>
+                            {qrSchedules.map((schedule) => (
+                                <option
+                                    key={schedule.id}
+                                    value={String(schedule.id)}
+                                >
+                                    {schedule.name}
+                                    {schedule.section
+                                        ? ` — ${schedule.section}`
+                                        : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
+                    {qrScheduleId ? (
+                        <QrAttendance
+                            key={qrScheduleId}
+                            scheduleId={Number(qrScheduleId)}
+                        />
+                    ) : (
+                        <p className="mt-3 text-sm text-gray-500">
+                            Choose the class being held before opening the
+                            scanner.
+                        </p>
+                    )}
+                </section>
                 <section
                     aria-label="Attendance filters"
                     className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5"

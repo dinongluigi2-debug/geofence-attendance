@@ -61,6 +61,7 @@ class QrAttendanceTest extends TestCase
         $student->forceFill([
             'student_qr_token_hash' => hash('sha256', $token),
             'student_qr_token_encrypted' => Crypt::encryptString($token),
+            'student_qr_expires_at' => now()->addYear(),
         ])->save();
 
         return [$instructor, $student, $schedule, $token];
@@ -135,6 +136,27 @@ class QrAttendanceTest extends TestCase
         $this->assertDatabaseCount('attendances', 0);
     }
 
+    public function test_existing_absent_record_is_not_overwritten_by_qr_attendance(): void
+    {
+        [$instructor, $student, $schedule, $token] = $this->fixture();
+        Attendance::create([
+            'student_id' => $student->id,
+            'schedule_id' => $schedule->id,
+            'attendance_date' => now()->toDateString(),
+            'status' => 'absent',
+        ]);
+
+        $this->actingAs($instructor)
+            ->postJson("/instructor/classes/{$schedule->id}/attendance/qr/record", [
+                'token' => $token,
+                'confirm_presence' => true,
+                'reason' => 'GPS unavailable',
+            ])->assertUnprocessable()->assertJsonValidationErrors('attendance');
+
+        $this->assertDatabaseCount('attendances', 1);
+        $this->assertDatabaseHas('attendances', ['student_id' => $student->id, 'status' => 'Absent']);
+    }
+
     public function test_invalid_revoked_or_inactive_student_codes_are_not_looked_up(): void
     {
         [$instructor, $student, $schedule, $token] = $this->fixture();
@@ -152,6 +174,9 @@ class QrAttendanceTest extends TestCase
             'student_qr_revoked_at' => null,
             'status' => 'Inactive',
         ])->save();
+        $this->actingAs($instructor)->postJson($lookup, ['token' => $token])->assertNotFound();
+
+        $student->forceFill(['status' => 'Active', 'student_qr_expires_at' => now()->subSecond()])->save();
         $this->actingAs($instructor)->postJson($lookup, ['token' => $token])->assertNotFound();
     }
 
@@ -199,6 +224,37 @@ class QrAttendanceTest extends TestCase
 
         $schedule->registeredStudents()->detach($student->id);
         $this->actingAs($instructor)->postJson($url, ['token' => $token])->assertForbidden();
+    }
+
+    public function test_record_requires_a_reason_and_is_instructor_only(): void
+    {
+        [$instructor, $student, $schedule, $token] = $this->fixture();
+        $url = "/instructor/classes/{$schedule->id}/attendance/qr/record";
+
+        $this->actingAs($student)->postJson($url, [
+            'token' => $token,
+            'confirm_presence' => true,
+            'reason' => 'GPS unavailable',
+        ])->assertForbidden();
+
+        $this->actingAs($instructor)->postJson($url, [
+            'token' => $token,
+            'confirm_presence' => true,
+        ])->assertUnprocessable()->assertJsonValidationErrors('reason');
+
+        $this->assertDatabaseCount('attendances', 0);
+    }
+
+    public function test_instructor_attendance_page_lists_classes_without_existing_attendance(): void
+    {
+        [$instructor, $student, $schedule] = $this->fixture();
+
+        $this->actingAs($instructor)->get('/attendance')
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('instructor/Attendance')
+                ->where('qrSchedules.0.id', $schedule->id)
+                ->where('qrSchedules.0.name', $schedule->subject));
     }
 
     public function test_instructor_can_revoke_and_regenerate_a_student_code(): void

@@ -22,7 +22,8 @@ class StudentDashboardController extends Controller
         $token = DB::transaction(function () use ($user): ?string {
             $lockedUser = $user->newQuery()->whereKey($user->id)->lockForUpdate()->firstOrFail();
 
-            if (! $lockedUser->student_qr_token_hash && ! $lockedUser->student_qr_revoked_at) {
+            if ((! $lockedUser->student_qr_token_hash || ! $lockedUser->student_qr_expires_at || $lockedUser->student_qr_expires_at->isPast())
+                && ! $lockedUser->student_qr_revoked_at) {
                 do {
                     $token = bin2hex(random_bytes(32));
                 } while ($lockedUser->newQuery()->where('student_qr_token_hash', hash('sha256', $token))->exists());
@@ -30,12 +31,13 @@ class StudentDashboardController extends Controller
                 $lockedUser->forceFill([
                     'student_qr_token_hash' => hash('sha256', $token),
                     'student_qr_token_encrypted' => Crypt::encryptString($token),
+                    'student_qr_expires_at' => now(config('app.timezone'))->addYear(),
                 ])->save();
 
                 return $token;
             }
 
-            return $lockedUser->student_qr_token_encrypted
+            return $lockedUser->student_qr_token_encrypted && $lockedUser->student_qr_expires_at?->isFuture()
                 ? Crypt::decryptString($lockedUser->student_qr_token_encrypted)
                 : null;
         });

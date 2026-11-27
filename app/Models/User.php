@@ -45,13 +45,14 @@ class User extends Authenticatable
     }
 
     protected $hidden = [
-        'password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token', 'student_qr_token_hash', 'student_qr_token_encrypted', 'student_qr_revoked_at',
+        'password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token', 'student_qr_token_hash', 'student_qr_token_encrypted', 'student_qr_revoked_at', 'student_qr_expires_at',
     ];
 
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
+            'student_qr_expires_at' => 'datetime',
             'password' => 'hashed',
         ];
     }

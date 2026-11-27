@@ -31,11 +31,21 @@ class AttendanceController extends Controller
 
     public function index(Request $request): Response
     {
-        app(AttendanceAutoService::class)->process(Schedule::where('user_id', $request->user()->id));
+        $instructorSchedules = Schedule::query()
+            ->where(fn ($query) => $query->where('user_id', $request->user()->id)
+                ->orWhere('instructor_id', $request->user()->id));
+        app(AttendanceAutoService::class)->process(clone $instructorSchedules);
 
         return Inertia::render('instructor/Attendance', [
+            'qrSchedules' => (clone $instructorSchedules)->orderBy('start_time')->get()
+                ->map(fn (Schedule $schedule) => [
+                    'id' => $schedule->id,
+                    'name' => $schedule->subject,
+                    'section' => $schedule->section,
+                ])->values(),
             'instructorAttendanceRecords' => Attendance::query()
-                ->whereHas('schedule', fn ($query) => $query->where('user_id', $request->user()->id))
+                ->whereHas('schedule', fn ($query) => $query->where('user_id', $request->user()->id)
+                    ->orWhere('instructor_id', $request->user()->id))
                 ->with(['student', 'schedule'])->latest()->get()->map(fn (Attendance $record) => [
                     'id' => $record->id,
                     'studentKey' => $record->student_id,
