@@ -2,6 +2,7 @@ import {
     CalendarDays,
     FileSpreadsheet,
     Grid2X2,
+    History,
     UserPlus,
     UserRound,
 } from 'lucide-react';
@@ -21,6 +22,12 @@ const items: SidebarLink[] = [
         title: 'Attendance Sheet',
         href: '/attendance/create',
         icon: FileSpreadsheet,
+        exact: true,
+    },
+    {
+        title: 'Attendance History',
+        href: '/attendance',
+        icon: History,
         exact: true,
     },
     {
